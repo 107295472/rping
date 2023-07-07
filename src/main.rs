@@ -3,7 +3,6 @@
 //     windows_subsystem = "windows"
 // )]
 mod utils;
-use anyhow::Result;
 use chrono::prelude::*;
 use dns_lookup::lookup_host;
 use flexi_logger::{DeferredNow, FileSpec, Logger, WriteMode};
@@ -73,10 +72,10 @@ async fn ping(address: &str) -> String {
 #[tokio::main]
 async fn main() {
     init();
-    println!("程序启动");
-    let (tx, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
-    tokio::spawn(print());
-    rx.recv().unwrap();
+    println!("program start");
+    let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+    print().await;
+    _ = rx.recv();
 }
 async fn print() {
     let mut interval = time::interval(time::Duration::from_secs(CFG.system.t));
@@ -125,7 +124,7 @@ async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
     // let mut data = String::from("");
     // data = serde_json::to_string(m.data);
     let mut headers = header::HeaderMap::new();
-    if !m.token.is_none() {
+    if m.token.is_some() {
         let auth_value =
             header::HeaderValue::from_str(&format!("Bearer {}", m.token.unwrap())).unwrap();
         // auth_value.set_sensitive(true);
@@ -180,12 +179,12 @@ pub fn init() {
     let f = DeferredNow::new()
         .format(TS_USCORE_DASHES_USCORE_DASHES)
         .to_string();
-    let s = FileSpec::default()
+    let s: FileSpec = FileSpec::default()
         .basename(format!("log{}", f))
         .directory("logs")
         .use_timestamp(false);
     // println!("{}", s);
-    let _ = Logger::try_with_str("info,error")
+    let _ = Logger::try_with_str("info")
         .unwrap()
         .log_to_file(s)
         .append()
@@ -195,7 +194,7 @@ pub fn init() {
     // info!("98546545");
     panic::set_hook(Box::new(move |panic_info| {
         common::error(panic_info.to_string());
-        println!("error:{}", panic_info.to_string());
+        println!("error:{}", panic_info);
         thread::sleep(Duration::from_secs(2));
         // 将 panic 信息写入文件中
         // let e = format!(

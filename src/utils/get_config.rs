@@ -1,8 +1,6 @@
 use std::{fs::File, io::Read};
 
-use lazy_static::lazy_static;
 use once_cell::sync::Lazy;
-use parking_lot::RwLock;
 
 use super::cfgs::Configs;
 const CFG_FILE: &str = "config.toml";

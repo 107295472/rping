@@ -1,5 +1,5 @@
 [system]
 client_name = "meishatest"
 t = 10
-send_host = ""
+send_host = "http://mmsswlcanteen.shttwl.cc/api/CanteenPing/AddCanteenPingAsync"
 pint_host = ["baidu.com", "jd.com"]
