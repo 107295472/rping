@@ -74,7 +74,8 @@ async fn main() {
     init();
     println!("program start");
     let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
-    print().await;
+    // print().await;
+    let _ = tokio::spawn(print()).await;
     _ = rx.recv();
 }
 async fn print() {
