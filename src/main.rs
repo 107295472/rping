@@ -63,7 +63,7 @@ struct CommandResult {
 //     }
 //     results
 // }
-#[cfg(feature = "ping")]
+// #[cfg(feature = "ping")]
 async fn ping(address: &str) -> String {
     match surge_ping::ping(address.parse().unwrap(), &[0; 32]).await {
         Ok((_packet, duration)) => format!("{:.2?}", duration),
@@ -72,8 +72,10 @@ async fn ping(address: &str) -> String {
 }
 #[tokio::main]
 async fn main() {
-    #[cfg(feature = "ping")]
-    init();
+    #[cfg(feature = "init")]
+    {
+        init();
+    }
     #[cfg(feature = "test")]
     {
         test().await;
@@ -92,12 +94,12 @@ async fn main() {
         _ = rx.recv();
     }
 }
-#[cfg(feature = "test")]
+// #[cfg(feature = "test")]
 async fn test() {
     println!("test")
 }
 //cpu指令检测
-#[cfg(feature = "cpu")]
+// #[cfg(feature = "cpu")]
 async fn cpu_avx() {
     let cpuid = CpuId::new();
 
@@ -111,7 +113,7 @@ async fn cpu_avx() {
     }
     thread::sleep(Duration::from_secs(5));
 }
-#[cfg(feature = "ping")]
+// #[cfg(feature = "ping")]
 async fn print() {
     let mut interval = time::interval(time::Duration::from_secs(CFG.system.t));
     loop {
@@ -155,7 +157,7 @@ async fn print() {
         }
     }
 }
-#[cfg(feature = "ping")]
+// #[cfg(feature = "ping")]
 async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
     // let mut data = String::from("");
     // data = serde_json::to_string(m.data);
