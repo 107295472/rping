@@ -20,3 +20,10 @@ lazy_static = "1.4.0"
 flexi_logger = "0.25.5"
 log = "0.4.18"
 chrono = { version = "0.4.26" }
+raw-cpuid = "11.0.1"
+
+[features]
+default = []
+cpu = []
+ping = []
+test = []

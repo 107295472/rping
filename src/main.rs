@@ -6,6 +6,7 @@ mod utils;
 use chrono::prelude::*;
 use dns_lookup::lookup_host;
 use flexi_logger::{DeferredNow, FileSpec, Logger, WriteMode};
+use raw_cpuid::CpuId;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::panic;
@@ -62,7 +63,7 @@ struct CommandResult {
 //     }
 //     results
 // }
-
+#[cfg(feature = "ping")]
 async fn ping(address: &str) -> String {
     match surge_ping::ping(address.parse().unwrap(), &[0; 32]).await {
         Ok((_packet, duration)) => format!("{:.2?}", duration),
@@ -71,13 +72,46 @@ async fn ping(address: &str) -> String {
 }
 #[tokio::main]
 async fn main() {
+    #[cfg(feature = "ping")]
     init();
-    println!("program start");
-    let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
-    // print().await;
-    let _ = tokio::spawn(print()).await;
-    _ = rx.recv();
+    #[cfg(feature = "test")]
+    {
+        test().await;
+    }
+    #[cfg(feature = "cpu")]
+    {
+        cpu_avx().await;
+    }
+    // let d: String = format!("{:.2?}", 51.015);
+    // println!("{}", d);
+
+    #[cfg(feature = "ping")]
+    {
+        let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+        let _ = tokio::spawn(print()).await;
+        _ = rx.recv();
+    }
 }
+#[cfg(feature = "test")]
+async fn test() {
+    println!("test")
+}
+//cpu指令检测
+#[cfg(feature = "cpu")]
+async fn cpu_avx() {
+    let cpuid = CpuId::new();
+
+    let has_sse = cpuid
+        .get_feature_info()
+        .map_or(false, |finfo| finfo.has_avx());
+    if has_sse {
+        println!("CPU支持!");
+    } else {
+        println!("CPU不支持!");
+    }
+    thread::sleep(Duration::from_secs(5));
+}
+#[cfg(feature = "ping")]
 async fn print() {
     let mut interval = time::interval(time::Duration::from_secs(CFG.system.t));
     loop {
@@ -121,6 +155,7 @@ async fn print() {
         }
     }
 }
+#[cfg(feature = "ping")]
 async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
     // let mut data = String::from("");
     // data = serde_json::to_string(m.data);
@@ -207,6 +242,7 @@ pub fn init() {
         // 继续 panic，以便程序退出
         std::process::exit(1);
     }));
+    println!("---------start----------");
 }
 
 #[derive(Deserialize, Clone, Serialize, Debug)]
