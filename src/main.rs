@@ -2,23 +2,40 @@
 //     all(not(debug_assertions), target_os = "windows"),
 //     windows_subsystem = "windows"
 // )]
-mod utils;
-use chrono::prelude::*;
+mod commons;
+use calamine::open_workbook;
+use calamine::Reader;
+use calamine::Xlsx;
+use chrono::Local;
+use clap::Parser;
+use commons::get_config::CFG;
 use dns_lookup::lookup_host;
-use flexi_logger::{DeferredNow, FileSpec, Logger, WriteMode};
+use ftlog::appender::FileAppender;
+use ftlog::appender::{Duration, Period};
+use ftlog::FtLogFormatter;
+use log::LevelFilter;
 use raw_cpuid::CpuId;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::panic;
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
-use std::thread;
-use std::time::Duration;
-use tokio::time;
-use utils::get_config::CFG;
+use std::path::PathBuf;
+use std::str::FromStr;
 
-use crate::utils::common;
+use std::thread;
+
+#[derive(Parser, Debug)]
+#[command(author="yin", version="1.0", about="表格文件比对工具", long_about = None)]
+struct Apprgs {
+    ///表格路径
+    #[arg(short, long)]
+    xlsx: String,
+
+    ///文件夹路径
+    #[arg(short, long)]
+    path: String,
+}
+
 #[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct AlctAPIModel {
     pub token: Option<String>,
@@ -70,6 +87,7 @@ async fn ping(address: &str) -> String {
         Err(e) => format!("{:?}", e),
     }
 }
+
 #[tokio::main]
 async fn main() {
     #[cfg(feature = "init")]
@@ -84,6 +102,11 @@ async fn main() {
     {
         cpu_avx().await;
     }
+    #[cfg(feature = "excel")]
+    {
+        let args = Apprgs::parse();
+        excel(args.xlsx, args.path).await;
+    }
     // let d: String = format!("{:.2?}", 51.015);
     // println!("{}", d);
 
@@ -93,6 +116,50 @@ async fn main() {
         let _ = tokio::spawn(print()).await;
         _ = rx.recv();
     }
+    println!("按回车退出...");
+    let mut s = String::new();
+    std::io::stdin().read_line(&mut s).unwrap();
+    // std::process::exit(1)
+}
+async fn excel(xlsx: String, path: String) {
+    // let cur = std::env::current_dir();
+    // let p = format!("{}\\cs\\1.xlsx", cur.unwrap().to_str().unwrap());
+    // println!("{}", p.clone());
+    let mut workbook: Xlsx<_> = open_workbook(xlsx).expect("Cannot open file");
+    let mut lists = vec![];
+    if let Some(Ok(range)) = workbook.worksheet_range("Sheet0") {
+        // let mut s = String::from("");
+
+        let mut index = 0;
+        for row in range.rows() {
+            // println!("row={:?}, row[0]={:?}", row, row[0]);
+            index += 1;
+            if index != 1 {
+                let rmbd = row[0].as_string().unwrap();
+                lists.push(rmbd);
+            }
+        }
+    }
+    let mut sf = vec![];
+    let p = std::path::PathBuf::from_str(&path).unwrap();
+    let entries = fs::read_dir(p).unwrap();
+
+    for entry in entries {
+        let entry = entry.unwrap();
+        let fp = entry.file_name();
+        let ss = fp.into_string().unwrap();
+        let sp = ss.clone();
+        if ss.contains(".pdf") {
+            let sss = sp.split('.').next().unwrap();
+            sf.push(sss.to_string());
+        }
+    }
+    // println!("{:?}", lists);
+    // println!("{:?}", sf);
+    let diff: Vec<_> = lists.iter().filter(|x| !sf.contains(x)).cloned().collect();
+    let new_content = diff.join("\r\n");
+    let _ = std::fs::write(format!("{}/diff.txt", path), new_content);
+    println!("未匹配数量: {}", diff.len());
 }
 // #[cfg(feature = "test")]
 async fn test() {
@@ -111,18 +178,18 @@ async fn cpu_avx() {
     } else {
         println!("CPU不支持!");
     }
-    thread::sleep(Duration::from_secs(5));
+    thread::sleep(std::time::Duration::from_secs(5));
 }
 // #[cfg(feature = "ping")]
 async fn print() {
-    let mut interval = time::interval(time::Duration::from_secs(CFG.system.t));
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(CFG.system.t));
     loop {
         interval.tick().await;
         let hostname = CFG.system.pint_host.clone();
         // thread::sleep(time::Duration::from_secs(8));
         let mut list = vec![];
         for h in hostname {
-            let ips = lookup_host(&h).unwrap_or(Vec::new());
+            let ips = lookup_host(&h).unwrap_or_default();
             for ip in ips {
                 let timeout = ping(&ip.to_string()).await;
                 let fmt = "%Y-%m-%d %H:%M:%S";
@@ -172,7 +239,7 @@ async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
     headers.insert(header::CONTENT_TYPE, t);
     let client = reqwest::Client::builder()
         .default_headers(headers)
-        .timeout(Duration::from_secs(20))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .unwrap();
 
@@ -213,40 +280,61 @@ async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
 }
 //后端初始化
 pub fn init() {
-    const TS_USCORE_DASHES_USCORE_DASHES: &str = "_%Y-%m-%d";
-    let f = DeferredNow::new()
-        .format(TS_USCORE_DASHES_USCORE_DASHES)
-        .to_string();
-    let s: FileSpec = FileSpec::default()
-        .basename(format!("log{}", f))
-        .directory("logs")
-        .use_timestamp(false);
-    // println!("{}", s);
-    let _ = Logger::try_with_str("info")
-        .unwrap()
-        .log_to_file(s)
-        .append()
-        .write_mode(WriteMode::BufferAndFlush)
-        .start();
+    // let utc_p8_tz = UtcOffset::from_hms(8, 0, 0).unwrap();
+    let mut pathstr = String::default();
+    let mut log_path = String::default();
+    let time_format = time::format_description::parse_owned::<1>(
+        "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]",
+    )
+    .unwrap();
 
-    // info!("98546545");
-    panic::set_hook(Box::new(move |panic_info| {
-        common::error(panic_info.to_string());
-        println!("error:{}", panic_info);
-        thread::sleep(Duration::from_secs(2));
-        // 将 panic 信息写入文件中
-        // let e = format!(
-        //     "info:{},\nLocation: {}",
-        //     panic_info,
-        //     panic_info.location().unwrap()
-        // );
+    // if cfg!(debug_assertions) {
+    //     log_path.push_str("../logs/alct.log");
+    //     pathstr.push_str("../logs");
+    // } else {
 
-        // 继续 panic，以便程序退出
-        std::process::exit(1);
-    }));
-    println!("---------start----------");
+    // }
+    log_path.push_str("./logs/alct.log");
+    pathstr.push_str("./logs");
+    let path = PathBuf::from(pathstr);
+    if !path.exists() {
+        if let Err(e) = fs::create_dir(path) {
+            println!("Error creating directory: {}", e);
+        }
+    }
+    ftlog::builder()
+        // global max log level
+        .max_log_level(LevelFilter::Info)
+        // .fixed_timezone(utc_p8_tz)
+        // custom timestamp format
+        .time_format(time_format)
+        // set global log formatter
+        .format(FtLogFormatter)
+        // use bounded channel to avoid large memory comsumption when overwhelmed with logs
+        // Set `false` to tell ftlog to discard excessive logs.
+        // Set `true` to block log call to wait for log thread.
+        // here is the default settings
+        .bounded(100_000, false) // .unbounded()
+        // define root appender, pass anything that is Write and Send
+        // omit `Builder::root` will write to stderr
+        .root(
+            FileAppender::builder()
+                .path(log_path)
+                .rotate(Period::Day)
+                .expire(Duration::days(7))
+                .build(),
+        )
+        // Do not convert to local timezone for timestamp, this does not affect worker thread,
+        // but can boost log thread performance (higher throughput).
+        // .utc()
+        // level filter for root appender
+        .root_log_level(LevelFilter::Info)
+        // write logs in ftlog::appender to "./ftlog-appender.log" instead of "./current.log"
+        // .filter("ftlog::appender", "ftlog-appender", LevelFilter::Error)
+        // .appender("ftlog-appender", FileAppender::new("ftlog-appender.log"))
+        .try_init()
+        .expect("logger build or set failed");
 }
-
 #[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct Pingdb {
     pub name: String,
