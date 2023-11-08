@@ -11,7 +11,7 @@ use clap::Parser;
 use commons::get_config::CFG;
 use dns_lookup::lookup_host;
 use ftlog::appender::FileAppender;
-use ftlog::appender::{Duration, Period};
+use ftlog::appender::Period;
 use ftlog::FtLogFormatter;
 use log::LevelFilter;
 use raw_cpuid::CpuId;
@@ -25,6 +25,39 @@ use std::str::FromStr;
 
 use std::thread;
 
+#[tokio::main]
+async fn main() {
+    #[cfg(feature = "init")]
+    {
+        init();
+    }
+    #[cfg(feature = "test")]
+    {
+        test().await;
+    }
+    #[cfg(feature = "cpu")]
+    {
+        cpu_avx().await;
+    }
+    #[cfg(feature = "excel")]
+    {
+        let args = Apprgs::parse();
+        excel(args.xlsx, args.path, args.is_head).await;
+    }
+    // let d: String = format!("{:.2?}", 51.015);
+    // println!("{}", d);
+
+    #[cfg(feature = "ping")]
+    {
+        let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+        let _ = tokio::spawn(print()).await;
+        _ = rx.recv();
+    }
+    // println!("按任意键退出...");
+    let mut s = String::new();
+    std::io::stdin().read_line(&mut s).unwrap();
+    // std::process::exit(1)
+}
 #[derive(Parser, Debug)]
 #[command(author="yin", version="1.0", about="表格文件比对工具,当前路径./开头", long_about = None)]
 struct Apprgs {
@@ -35,6 +68,9 @@ struct Apprgs {
     ///文件夹路径
     #[arg(short, long)]
     path: String,
+    ///是否有头 1=是
+    #[arg(short, long, default_value_t = 0)]
+    is_head: i32,
 }
 
 #[derive(Deserialize, Clone, Serialize, Debug)]
@@ -89,40 +125,7 @@ async fn ping(address: &str) -> String {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    #[cfg(feature = "init")]
-    {
-        init();
-    }
-    #[cfg(feature = "test")]
-    {
-        test().await;
-    }
-    #[cfg(feature = "cpu")]
-    {
-        cpu_avx().await;
-    }
-    #[cfg(feature = "excel")]
-    {
-        let args = Apprgs::parse();
-        excel(args.xlsx, args.path).await;
-    }
-    // let d: String = format!("{:.2?}", 51.015);
-    // println!("{}", d);
-
-    #[cfg(feature = "ping")]
-    {
-        let (_, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
-        let _ = tokio::spawn(print()).await;
-        _ = rx.recv();
-    }
-    // println!("按任意键退出...");
-    let mut s = String::new();
-    std::io::stdin().read_line(&mut s).unwrap();
-    // std::process::exit(1)
-}
-async fn excel(xlsx: String, path: String) {
+async fn excel(xlsx: String, path: String, is_head: i32) {
     // let cur = std::env::current_dir();
     // let p = format!("{}\\cs\\1.xlsx", cur.unwrap().to_str().unwrap());
     // println!("{}", p.clone());
@@ -137,15 +140,18 @@ async fn excel(xlsx: String, path: String) {
     if let Some(Ok(range)) = workbook.worksheet_range("Sheet1") {
         // let mut s = String::from("");
 
-        // let mut index = 0;
+        let mut index = 0;
         for row in range.rows() {
-            let rmbd = row[0].as_string().unwrap();
-
-            lists.push(rmbd);
-            // index += 1;
-            // if index != 1 {
-
-            // }
+            if is_head == 1 {
+                index += 1;
+                if index != 1 && !row[0].is_empty() {
+                    let rmbd = row[0].as_string().unwrap();
+                    lists.push(rmbd);
+                }
+            } else if !row[0].is_empty() {
+                let rmbd = row[0].as_string().unwrap();
+                lists.push(rmbd);
+            }
         }
     }
     let mut sf = vec![];
