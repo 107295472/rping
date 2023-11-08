@@ -17,6 +17,7 @@ use log::LevelFilter;
 use raw_cpuid::CpuId;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use std::ffi::OsStr;
 use std::fs;
 use std::panic;
 use std::path::PathBuf;
@@ -25,7 +26,7 @@ use std::str::FromStr;
 use std::thread;
 
 #[derive(Parser, Debug)]
-#[command(author="yin", version="1.0", about="表格文件比对工具", long_about = None)]
+#[command(author="yin", version="1.0", about="表格文件比对工具,当前路径./开头", long_about = None)]
 struct Apprgs {
     ///表格路径
     #[arg(short, long)]
@@ -116,7 +117,7 @@ async fn main() {
         let _ = tokio::spawn(print()).await;
         _ = rx.recv();
     }
-    println!("按回车退出...");
+    // println!("按任意键退出...");
     let mut s = String::new();
     std::io::stdin().read_line(&mut s).unwrap();
     // std::process::exit(1)
@@ -125,23 +126,30 @@ async fn excel(xlsx: String, path: String) {
     // let cur = std::env::current_dir();
     // let p = format!("{}\\cs\\1.xlsx", cur.unwrap().to_str().unwrap());
     // println!("{}", p.clone());
-    let mut workbook: Xlsx<_> = open_workbook(xlsx).expect("Cannot open file");
+    let os_str = OsStr::new(&path);
+    let rust_path = os_str.to_str().unwrap();
+
+    let os_xlsxstr = OsStr::new(&xlsx);
+    let rust_xlsx = os_xlsxstr.to_str().unwrap();
+
+    let mut workbook: Xlsx<_> = open_workbook(rust_xlsx).expect("Cannot open file");
     let mut lists = vec![];
-    if let Some(Ok(range)) = workbook.worksheet_range("Sheet0") {
+    if let Some(Ok(range)) = workbook.worksheet_range("Sheet1") {
         // let mut s = String::from("");
 
-        let mut index = 0;
+        // let mut index = 0;
         for row in range.rows() {
-            // println!("row={:?}, row[0]={:?}", row, row[0]);
-            index += 1;
-            if index != 1 {
-                let rmbd = row[0].as_string().unwrap();
-                lists.push(rmbd);
-            }
+            let rmbd = row[0].as_string().unwrap();
+
+            lists.push(rmbd);
+            // index += 1;
+            // if index != 1 {
+
+            // }
         }
     }
     let mut sf = vec![];
-    let p = std::path::PathBuf::from_str(&path).unwrap();
+    let p = std::path::PathBuf::from_str(rust_path).unwrap();
     let entries = fs::read_dir(p).unwrap();
 
     for entry in entries {
@@ -157,9 +165,17 @@ async fn excel(xlsx: String, path: String) {
     // println!("{:?}", lists);
     // println!("{:?}", sf);
     let diff: Vec<_> = lists.iter().filter(|x| !sf.contains(x)).cloned().collect();
+    let diff_reverse: Vec<_> = sf.iter().filter(|x| !lists.contains(x)).cloned().collect();
     let new_content = diff.join("\r\n");
     let _ = std::fs::write(format!("{}/diff.txt", path), new_content);
+
+    let reverse_content = diff_reverse.join("\r\n");
+    let _ = std::fs::write(format!("{}/diff_reverse.txt", rust_path), reverse_content);
     println!("未匹配数量: {}", diff.len());
+    println!("已写入: {}/diff.txt", rust_path);
+
+    println!("反向未匹配数量: {}", diff_reverse.len());
+    println!("已写入: {}/diff_reverse.txt", rust_path);
 }
 // #[cfg(feature = "test")]
 async fn test() {
@@ -278,6 +294,21 @@ async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
     //     Err(e) => todo!(),
     // }
 }
+
+#[derive(Deserialize, Clone, Serialize, Debug)]
+pub struct Pingdb {
+    pub name: String,
+    pub host: Vec<Sdata>,
+}
+
+#[derive(Deserialize, Clone, Serialize, Debug)]
+pub struct Sdata {
+    pub name: String,
+    pub avg: String,
+    pub curtime: String,
+    pub min: i32,
+    pub max: i32,
+}
 //后端初始化
 pub fn init() {
     // let utc_p8_tz = UtcOffset::from_hms(8, 0, 0).unwrap();
@@ -321,7 +352,7 @@ pub fn init() {
             FileAppender::builder()
                 .path(log_path)
                 .rotate(Period::Day)
-                .expire(Duration::days(7))
+                .expire(time::Duration::days(7))
                 .build(),
         )
         // Do not convert to local timezone for timestamp, this does not affect worker thread,
@@ -334,18 +365,4 @@ pub fn init() {
         // .appender("ftlog-appender", FileAppender::new("ftlog-appender.log"))
         .try_init()
         .expect("logger build or set failed");
-}
-#[derive(Deserialize, Clone, Serialize, Debug)]
-pub struct Pingdb {
-    pub name: String,
-    pub host: Vec<Sdata>,
-}
-
-#[derive(Deserialize, Clone, Serialize, Debug)]
-pub struct Sdata {
-    pub name: String,
-    pub avg: String,
-    pub curtime: String,
-    pub min: i32,
-    pub max: i32,
 }

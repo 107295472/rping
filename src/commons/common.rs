@@ -1,6 +1,14 @@
-use std::{fs::File, io::Write};
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::PathBuf,
+};
 
-use log::{error, info};
+use ftlog::{
+    appender::{FileAppender, Period},
+    FtLogFormatter,
+};
+use log::{error, info, LevelFilter};
 pub fn error(e: String) {
     error!("{}", e)
 }
