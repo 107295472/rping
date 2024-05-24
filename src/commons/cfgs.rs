@@ -33,4 +33,9 @@ pub struct System {
     pub t: u64, //秒
     pub send_host: String,
     pub client_name: String,
+    pub redis_ip: String,
+    pub reids_port: String,
+    pub redis_pwd: String,
+    pub method_domain: String,
+    pub method_adress: String,
 }

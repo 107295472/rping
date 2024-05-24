@@ -1,6 +1,11 @@
 
 [system]
+method_domain = "https://wlhy2.lnhx.com.cn:8097/"
+method_adress = ""
 client_name = "meishatest"
 t = 10
 send_host = "http://mmsswlcanteen.shttwl.cc/api/CanteenPing/AddCanteenPingAsync"
 pint_host = ["baidu.com", "jd.com"]
+redis_ip = "192.168.10.21"
+reids_port = "6379"
+redis_pwd = "redis@2021f3s9%"
