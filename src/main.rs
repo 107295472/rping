@@ -3,15 +3,16 @@
 //     windows_subsystem = "windows"
 // )]
 mod bll;
+mod commands;
 mod commons;
-
+use bll::exwaybill::ex_waybill_gen;
 use bll::{exwaybill::*, tools::*};
+use clap::{Command, Parser};
 use commons::global;
-
 #[tokio::main]
 async fn main() {
     global::init();
-    ex_waybill_gen().await;
+    // ex_waybill_gen().await;
     #[cfg(feature = "ex_waybill")]
     {
         ex_waybill_gen().await;

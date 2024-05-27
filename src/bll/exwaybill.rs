@@ -1,17 +1,13 @@
-use core::hash;
-use std::{collections::HashMap, path, time::Duration};
+use std::time::Duration;
 
 use crate::commons::{common, consts, get_config::CFG, model::AlctAPIModel};
 use redis::Commands;
 use reqwest::header;
 use rust_xlsxwriter::{Format, Workbook};
-use sea_orm::{
-    sea_query::{SqliteQueryBuilder, Table, TableCreateStatement},
-    ColumnDef, ConnectionTrait, Database, DbBackend, DbConn, Schema,
-};
 use serde::{Deserialize, Serialize};
 pub async fn ex_waybill_gen() {
-    let mut hashmap: HashMap<Option<String>, Option<String>> = HashMap::new();
+    // let mut hashmap: HashMap<Option<String>, Option<String>> = HashMap::new();
+    let mut result: Vec<Record> = Vec::new();
     for n in 0..17 {
         let mut con = common::get_redis().unwrap();
         let dd = con.get(consts::TOKEN);
@@ -39,9 +35,10 @@ pub async fn ex_waybill_gen() {
                 // println!("code:{},for index:{}", res.code.unwrap(), n);
                 let records: Option<Vec<Record>> = res.result.unwrap().records;
                 // println!("{},{},{}", n, records.is_none(), records.unwrap().len());
-                for i in records.unwrap().iter() {
+                for i in records.unwrap().into_iter() {
                     // println!("{}", i.kp_status.clone().unwrap());
-                    hashmap.insert(i.shipment_code.clone(), i.kp_status.clone());
+                    // hashmap.insert(i.shipment_code.clone(), i.kp_status.clone());
+                    result.push(i);
                 }
                 // println!("len原始---{}", hashmap.len());
 
@@ -57,9 +54,9 @@ pub async fn ex_waybill_gen() {
         };
         common::sleep_async(2).await;
     }
-    gen_excel(hashmap).await;
+    gen_excel(result).await;
 }
-async fn gen_excel(m: HashMap<Option<String>, Option<String>>) {
+async fn gen_excel(m: Vec<Record>) {
     println!("len---{}", m.len());
     let mut workbook = Workbook::new();
 
@@ -87,10 +84,10 @@ async fn gen_excel(m: HashMap<Option<String>, Option<String>>) {
     _ = _worksheet.set_column_width(index, 26);
     let mut cindex = 1;
     // let color_format = Format::new().set_background_color(XlsxColor::RGB(0xf08409));
-    for (k, v) in m.iter() {
+    for v in m {
         // println!("yd----{}", k.clone().unwrap());
-        _ = _worksheet.write_string(cindex, 0, v.clone().unwrap_or(String::default()));
-        _ = _worksheet.write_string(cindex, 1, k.clone().unwrap_or(String::default()));
+        _ = _worksheet.write_string(cindex, 0, v.kp_status.unwrap_or(String::default()));
+        _ = _worksheet.write_string(cindex, 1, v.shipment_code.unwrap_or(String::default()));
         _ = _worksheet.write_string(cindex, 2, &String::default());
         _ = _worksheet.write_string(cindex, 3, &String::default());
         _ = _worksheet.write_string(cindex, 4, &String::default());
