@@ -23,12 +23,12 @@ pub async fn ex_waybill_gen() {
                     method_domain: CFG.system.method_domain.clone(),
                     data: String::default(),
                 };
-                let resdata = send_api(req).await;
-                let ress = match resdata {
-                    Ok(v) => v,
-                    Err(e) => panic!("{}", e.to_string()),
-                };
-                let res: RootNode = serde_json::from_str(&ress).unwrap();
+                let resdata = send_api(req).await.unwrap();
+                // let ress = match resdata {
+                //     Ok(v) => v,
+                //     Err(e) => panic!("{}", e.to_string()),
+                // };
+                let res: RootNode = serde_json::from_str(&resdata).unwrap();
                 // let db = Database::connect("sqlite::memory:")
                 //     .await
                 //     .expect("数据库初始错误");

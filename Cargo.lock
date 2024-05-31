@@ -1984,27 +1984,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rsa"
-version = "0.9.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
-dependencies = [
- "const-oid",
- "digest",
- "num-bigint-dig",
- "num-integer",
- "num-traits",
- "pkcs1",
- "pkcs8",
- "rand_core",
- "signature",
- "spki",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "rtools"
+name = "rping"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2030,6 +2010,26 @@ dependencies = [
  "time",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "rsa"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
+dependencies = [
+ "const-oid",
+ "digest",
+ "num-bigint-dig",
+ "num-integer",
+ "num-traits",
+ "pkcs1",
+ "pkcs8",
+ "rand_core",
+ "signature",
+ "spki",
+ "subtle",
+ "zeroize",
 ]
 
 [[package]]

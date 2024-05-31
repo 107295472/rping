@@ -13,6 +13,7 @@ use commons::global;
 async fn main() {
     global::init();
     // ex_waybill_gen().await;
+    println!("请稍候...");
     #[cfg(feature = "ex_waybill")]
     {
         ex_waybill_gen().await;
@@ -32,7 +33,7 @@ async fn main() {
         let _ = tokio::spawn(print()).await;
         _ = rx.recv();
     }
-    println!("按任意键退出...");
+    println!("已完成...");
     let mut s = String::new();
     std::io::stdin().read_line(&mut s).unwrap();
     // std::process::exit(1)
