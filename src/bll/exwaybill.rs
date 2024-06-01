@@ -59,7 +59,11 @@ pub async fn ex_waybill_gen() {
 async fn gen_excel(m: Vec<Record>) {
     println!("len---{}", m.len());
     let mut workbook = Workbook::new();
-
+    let mut ids = String::from(
+        "select sum(b.PaidAccount) from Waybill a 
+    left join WaybillFreight b on a.WaybillId = b.WaybillId 
+    where a.WaybillNo in(",
+    );
     let _worksheet = workbook.add_worksheet();
     _ = _worksheet.set_name("Sheet0");
     // global::info_msg("2222222222");
@@ -86,6 +90,7 @@ async fn gen_excel(m: Vec<Record>) {
     // let color_format = Format::new().set_background_color(XlsxColor::RGB(0xf08409));
     for v in m {
         // println!("yd----{}", k.clone().unwrap());
+        ids.push_str(&format!("'{}',", v.shipment_code.clone().unwrap()));
         _ = _worksheet.write_string(cindex, 0, v.kp_status.unwrap_or(String::default()));
         _ = _worksheet.write_string(cindex, 1, v.shipment_code.unwrap_or(String::default()));
         _ = _worksheet.write_string(cindex, 2, &String::default());
@@ -98,8 +103,12 @@ async fn gen_excel(m: Vec<Record>) {
     }
 
     // println!("{}", path);
+    let filename = common::get_time_str();
+    let sql = ids.trim_end_matches(',').parse::<String>().unwrap() + ")";
+
+    common::write_file(format!("{}.txt", filename), sql.as_bytes());
     workbook
-        .save(format!("{}.xlsx", common::get_time_str()))
+        .save(format!("{}.xlsx", filename))
         .expect("保存Excel错误");
 }
 pub async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {

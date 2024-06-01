@@ -16,12 +16,12 @@ pub struct Args {
 pub struct Apprgs {
     ///表格路径
     #[arg(short, long)]
-    xlsx: String,
+    pub xlsx: String,
 
     ///文件夹路径
     #[arg(short, long)]
-    path: String,
+    pub path: String,
     ///是否有头 1=是
     #[arg(short, long, default_value_t = 0)]
-    is_head: i32,
+    pub is_head: i32,
 }

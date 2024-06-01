@@ -8,11 +8,11 @@ mod commons;
 use bll::exwaybill::ex_waybill_gen;
 use bll::{exwaybill::*, tools::*};
 use clap::{Command, Parser};
+use commands::Apprgs;
 use commons::global;
 #[tokio::main]
 async fn main() {
     global::init();
-    // ex_waybill_gen().await;
     println!("请稍候...");
     #[cfg(feature = "ex_waybill")]
     {

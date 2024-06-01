@@ -79,5 +79,5 @@ pub fn init() {
         // 继续 panic，以便程序退出
         std::process::exit(1);
     }));
-    common::sleep_sync(2);
+    common::sleep_sync(1);
 }
