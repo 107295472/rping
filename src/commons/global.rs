@@ -43,7 +43,7 @@ pub fn init() {
         // omit `Builder::root` will write to stderr
         .root(
             FileAppender::builder()
-                .path(format!("{}/alct.log", log_path))
+                .path(format!("{}/rping.log", log_path))
                 .rotate(Period::Day)
                 .expire(du::days(10))
                 .build(),

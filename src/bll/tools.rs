@@ -65,13 +65,9 @@ pub async fn excel(xlsx: String, path: String, is_head: i32) {
     let mut lists = vec![];
     let drange: Result<calamine::Range<calamine::Data>, calamine::XlsxError> =
         workbook.worksheet_range("Sheet1");
-    let range = match drange {
-        Ok(v) => v,
-        Err(e) => panic!("{}", e.to_string()),
-    };
 
     let mut index = 0;
-    for row in range.rows() {
+    for row in drange.unwrap().rows() {
         if is_head == 1 {
             index += 1;
             if index != 1 && !row[0].is_empty() {

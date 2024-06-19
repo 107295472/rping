@@ -59,6 +59,7 @@ pub async fn ex_waybill_gen() {
 async fn gen_excel(m: Vec<Record>) {
     println!("len---{}", m.len());
     let mut workbook = Workbook::new();
+    //生成统计钱数sql语句
     let mut ids = String::from(
         "select sum(b.PaidAccount) from Waybill a 
     left join WaybillFreight b on a.WaybillId = b.WaybillId 
@@ -70,6 +71,8 @@ async fn gen_excel(m: Vec<Record>) {
     let colv = vec![
         "发票申请号",
         "运单编号",
+        "审核意见",
+        "审核时间",
         "缺少车头照片",
         "缺少车身照片",
         "缺少磅单",
@@ -93,9 +96,11 @@ async fn gen_excel(m: Vec<Record>) {
         ids.push_str(&format!("'{}',", v.shipment_code.clone().unwrap()));
         _ = _worksheet.write_string(cindex, 0, v.kp_status.unwrap_or(String::default()));
         _ = _worksheet.write_string(cindex, 1, v.shipment_code.unwrap_or(String::default()));
-        _ = _worksheet.write_string(cindex, 2, &String::default());
-        _ = _worksheet.write_string(cindex, 3, &String::default());
+        _ = _worksheet.write_string(cindex, 2, v.audit_reason.unwrap_or(String::default()));
+        _ = _worksheet.write_string(cindex, 3, v.audit_time.unwrap_or(String::default()));
         _ = _worksheet.write_string(cindex, 4, &String::default());
+        _ = _worksheet.write_string(cindex, 5, &String::default());
+        _ = _worksheet.write_string(cindex, 6, &String::default());
 
         // let bold_italic_format = Format::new().set_bold().set_italic();
         // _worksheet.write_number_with_format(row, col, 232.21, &bold_italic_format);
@@ -259,7 +264,7 @@ pub struct Record {
     // pub signee_receive_time: Option<String>,
     // pub audit_one: Option<AuditOne>,
     // pub audit_flag: Option<String>,
-    // pub audit_reason: Option<String>,
+    pub audit_reason: Option<String>,
     pub kp_status: Option<String>,
     // pub signee_error: Option<serde_json::Value>,
     // pub receipt_no: Option<String>,
@@ -275,7 +280,7 @@ pub struct Record {
     // pub receipt_by: Option<serde_json::Value>,
     // pub receipt_remarks: Option<serde_json::Value>,
     // pub tj_time: Option<String>,
-    // pub audit_time: Option<String>,
+    pub audit_time: Option<String>,
     // pub js_time: Option<String>,
     // pub is_ios: Option<String>,
     // pub is_ycsj: Option<String>,
