@@ -6,14 +6,19 @@ mod bll;
 mod commands;
 mod commons;
 use bll::exwaybill::ex_waybill_gen;
+use bll::invoice_details::invoice_details_gen;
 use bll::{exwaybill::*, tools::*};
 use clap::{Command, Parser};
-use commands::Apprgs;
+use commands::{Apprgs, InvoiceArgs};
 use commons::global;
 #[tokio::main]
 async fn main() {
     global::init();
     println!("请稍候...");
+    #[cfg(feature = "invoice_details")]
+    {
+        invoice_details_gen(InvoiceArgs::parse().daid).await;
+    }
     #[cfg(feature = "ex_waybill")]
     {
         ex_waybill_gen().await;

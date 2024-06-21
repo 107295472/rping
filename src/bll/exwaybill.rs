@@ -200,7 +200,7 @@ pub async fn send_api(m: AlctAPIModel) -> reqwest::Result<String> {
 //     // Execute create table statement
 //     let result = db.execute(db.get_database_backend().build(&stmt)).await;
 // }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RootNode {
     pub success: Option<bool>,
     pub message: Option<String>,
@@ -209,7 +209,7 @@ pub struct RootNode {
     pub timestamp: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Result {
     pub records: Option<Vec<Record>>,

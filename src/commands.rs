@@ -25,3 +25,10 @@ pub struct Apprgs {
     #[arg(short, long, default_value_t = 0)]
     pub is_head: i32,
 }
+#[derive(Parser, Debug)]
+#[command(author="y", version="1.0", about="司机发票运单列表", long_about = None)]
+pub struct InvoiceArgs {
+    ///发票申请号
+    #[arg(short, long)]
+    pub daid: String,
+}
